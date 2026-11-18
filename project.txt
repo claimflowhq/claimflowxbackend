@@ -1,0 +1,453 @@
+ClaimFlow MVP – Project Brief
+Insurance Claims Management, Soroban Approval & Payout Authorization on Stellar
+Project Duration:
+Blockchain: Stellar Testnet / Soroban
+Project Type: Responsive Web Application MVP 1.0
+Target Team: UI/UX Designer, Frontend Developer, Backend Developer, Soroban Smart Contract Developer
+1. Project Overview
+ClaimFlow is a blockchain-powered insurance claims management platform built on Stellar that enables claimants to submit insurance claims, authorized reviewers to assess and approve or reject claims, and administrators to track payout authorization and transaction activity.
+The platform addresses common challenges in insurance claims processing, including fragmented claim records, limited visibility into claim progress, inconsistent approval procedures, and difficulty verifying whether a claim has been approved or authorized for payment.
+With ClaimFlow, a claimant submits a claim containing the relevant policy reference, incident description, and requested compensation amount.
+The system generates a unique claim reference and makes the submission available to authorized reviewers.
+Reviewers can assess the claim, record their decisions, and update its status.
+A Soroban smart contract maintains verifiable records of important claim-state changes and enforces authorization rules, ensuring that only permitted reviewers can approve claims or authorize payouts.
+The payout dashboard provides visibility into approved claims, authorized payout amounts, and relevant Stellar Testnet transactions.
+Primary MVP goal: Build a functional claims management platform demonstrating claim submission, structured review, Soroban-based claim-state management, authorized payout decisions, and transaction monitoring.
+Important scope distinction: Claim approval and payout authorization are not the same as transferring funds. The core MVP must demonstrate secure payout authorization. Actual USDC settlement is optional and should be implemented only if separately agreed within the sprint.
+2. How ClaimFlow Works
+Example use case
+A policyholder submits an insurance claim for 500 USDC equivalent following a covered incident.
+Step
+Action
+Status
+1
+Claimant submits claim
+Submitted
+2
+Reviewer opens claim
+Under Review
+3
+Reviewer validates claim
+Approved
+4
+Authorized administrator authorizes 400 USDC equivalent
+Authorized
+5
+System records authorization on Soroban
+Confirmed
+6
+Optional testnet payment is initiated
+Pending Settlement
+7
+Payment transaction succeeds
+Settled
+
+The approved amount may differ from the requested amount, provided it is recorded and validated under the claim's rules.
+3. Core MVP Deliverables
+Deliverable 1: Claim Submission & Reviewer Workflow
+Objective: Develop a structured system that allows claimants to submit insurance claims and authorized reviewers to assess, approve, or reject them.
+Feature
+Development requirements
+Claim submission
+Provide a form for creating insurance claims
+Claimant information
+Capture essential claimant details
+Policy reference
+Associate each claim with a policy identifier
+Claim description
+Record incident information and claim reason
+Requested amount
+Capture requested compensation amount
+Unique claim ID
+Generate a reference for each claim
+Form validation
+Validate required information before submission
+Reviewer dashboard
+Display submitted and pending claims
+Claim review
+Allow authorized reviewers to assess claim details
+Approval / rejection
+Record reviewer decisions and comments
+Claim status
+Track Submitted, Under Review, Approved, and Rejected
+Claim history
+Display chronological status updates
+Notifications
+Display relevant submission and decision updates
+
+Claim submission requirements
+Each claim should contain:
+Unique claim reference.
+Claimant name or identifier.
+Claimant wallet address, where applicable.
+Insurance policy reference.
+Claim category.
+Incident description.
+Incident date.
+Requested amount.
+Supporting evidence reference, if required.
+Submission timestamp.
+Current claim status.
+Sensitive claimant information and supporting documents should remain in protected off-chain storage.
+Recommended claim statuses
+Status
+Meaning
+Draft
+Claim being prepared
+Submitted
+Claim successfully submitted
+Under Review
+Reviewer assessing claim
+Approved
+Claim accepted
+Rejected
+Claim declined
+
+The review interface should require a decision record before approval or rejection, including the authorized reviewer, decision timestamp, and relevant comments.
+Reviewer authorization
+Only approved reviewer accounts or wallets should be able to:
+Move claims into review.
+Approve or reject claims.
+Record official decisions.
+Submit authorized claim-state changes to Soroban.
+Acceptance criteria: A claimant can submit a valid claim, receive a unique reference, and track its status. An authorized reviewer can assess the claim, approve or reject it, and record a verifiable decision.
+Deliverable 2: Soroban Claim-State Management & Payout Authorization
+Objective: Develop a Soroban smart contract that records important claim lifecycle events and enforces reviewer authorization, valid state transitions, and payout authorization rules.
+Feature
+Development requirements
+Claim registration
+Create unique on-chain claim references
+Claim state
+Record Submitted, Under Review, Approved, and Rejected states
+Role-based access
+Restrict sensitive actions to authorized reviewers
+State transitions
+Enforce valid claim status changes
+Reviewer decisions
+Record approved or rejected outcomes
+Approved amount
+Store the authorized compensation amount
+Payout authorization
+Record authorization for approved claims
+Duplicate prevention
+Prevent repeated authorization for the same claim
+Amount validation
+Ensure authorized payout does not exceed approved amount
+Contract events
+Emit claim registration, decision, and authorization events
+Contract queries
+Allow applications to retrieve verified claim states
+Security checks
+Reject unauthorized actions and invalid requests
+
+Recommended on-chain claim lifecycle
+State
+Allowed next action
+Submitted
+Move to Under Review
+Under Review
+Approve or Reject
+Approved
+Authorize payout
+Rejected
+No payout authorization
+Payout Authorized
+Monitor settlement separately
+
+Smart contract security rules
+Every claim must have a unique identifier.
+Only authorized wallets can perform protected reviewer actions.
+Claims must follow predefined state transitions.
+Rejected claims cannot receive payout authorization.
+Unreviewed claims cannot be authorized for payout.
+Approved claim amounts must be valid and nonnegative.
+Authorized payout amounts cannot exceed approved amounts.
+A claim cannot receive duplicate payout authorization.
+Unauthorized wallets cannot alter approval decisions.
+Failed contract transactions must not incorrectly update claim state.
+Recommended contract data model
+The contract should maintain only essential references and authorization information:
+Claim ID.
+Claimant wallet or pseudonymous identifier.
+Reviewer authorization reference.
+Claim status.
+Approved amount.
+Payout authorization status.
+Relevant timestamps or ledger references.
+Contract events.
+Personal medical details, incident descriptions, insurance documents, and private claimant records should not be stored directly on-chain.
+Acceptance criteria: The contract can register claims, enforce authorized state transitions, record reviewer decisions, and authorize payouts only for eligible approved claims.
+Deliverable 3: Payout Dashboard, Transaction Monitoring & Testing
+Objective: Build a dashboard for monitoring approved claims, payout authorization, and relevant Stellar Testnet transaction activity.
+Feature
+Development requirements
+Claims summary
+Display submitted, approved, rejected, and pending claims
+Approved claims
+Show claims awaiting payout authorization
+Payout authorization
+Display authorization status and approved amount
+Transaction monitoring
+Track relevant Soroban and Stellar transactions
+Status tracking
+Distinguish Pending, Authorized, Successful, and Failed
+Transaction references
+Display transaction hashes and contract references
+Claim activity
+Show chronological review and authorization history
+Error handling
+Display failed contract interactions and invalid requests
+Reconciliation
+Distinguish authorization records from actual settlement
+Testing
+Validate claim workflows, permissions, and financial rules
+
+Important payment distinction
+Stage
+Meaning
+Funds transferred?
+Claim Approved
+Reviewer accepts claim
+No
+Payout Authorized
+Soroban records payment authorization
+No
+Payment Pending
+Optional payment transaction initiated
+Not confirmed
+Payment Successful
+Stellar confirms actual transfer
+Yes
+Payment Failed
+Transaction unsuccessful
+No
+
+The dashboard must not label an authorized payout as paid unless an actual payment transaction has been successfully confirmed.
+4. UI/UX Designer Brief
+ClaimFlow should resemble a modern insurance operations platform, with straightforward claim submission, structured review, and transparent payout monitoring.
+Design direction: Professional, clean, accessible, trustworthy, and responsive.
+Required screens
+Insurance Claim Management System figma UI design by Hafsa salman l UI designer on Dribbble
+1. Landing & Claimant Dashboard
+Welcome / login
+My claims
+Submit Claim button
+Claim status summary
+Recent claim activity
+Notifications
+Design case study: Redesigning DOCOsoft's interface | David Hall
+2. Claim Submission
+Claimant details
+Policy reference
+Claim category
+Incident description
+Requested amount
+Supporting evidence
+Submit Claim button
+SAAS - Insurance Claim Dashboard by The Cherry-Haus on Dribbble
+3. Reviewer Dashboard
+Pending claims
+Submitted claims
+Claims under review
+Search and filters
+Claim details
+Review actions
+User Interaction for Insurance Claim Management System by Koru UX Design on Dribbble
+4. Claim Review & Decision
+Claim details
+Policy reference
+Requested amount
+Evidence summary
+Reviewer comments
+Approved amount
+Approve / Reject buttons
+Insurance Management Software | Policy, Claims & Underwriting
+5. Payout Authorization
+Approved claims
+Authorized amount
+Reviewer identity
+Authorization status
+Authorize Payout button
+Contract confirmation
+Merchant Dashboard | PaychainX Payment Infrastructure
+6. Transaction Monitoring
+Claim references
+Authorization transactions
+Transaction hashes
+Pending / Successful / Failed
+Stellar explorer links
+Activity history
+Hedvig — Sandra Maske
+7. Claim History & Tracking
+Claim reference
+Submission date
+Current status
+Reviewer decision
+Status timeline
+Payout authorization record
+Visual references are illustrative, not final ClaimFlow designs.
+Designer deliverables
+Complete Figma designs for claimant, reviewer, and administrator workflows.
+Responsive desktop and mobile layouts.
+Interactive prototype showing submission, review, approval, rejection, and authorization.
+Reusable component library.
+Loading, submitted, under review, approved, rejected, authorized, and failed states.
+Developer-ready handoff.
+5. Developer Responsibilities
+Frontend Developer
+Implement:
+Claimant registration and dashboard.
+Claim submission form.
+Claim status tracking.
+Reviewer dashboard.
+Claim approval and rejection interface.
+Reviewer decision comments.
+Payout authorization interface.
+Soroban contract integration.
+Transaction history and explorer links.
+Error and validation messages.
+Responsive desktop and mobile layouts.
+Backend Developer
+Component
+Requirements
+Claim records
+Store claim descriptions and policy references
+Claimant profiles
+Store protected claimant information
+Supporting evidence
+Securely manage claim-related documents
+Reviewer permissions
+Manage authorized reviewer accounts and access
+Claim history
+Record submission and review activities
+Contract indexing
+Index verified claim-state and authorization events
+Transaction monitoring
+Retrieve confirmed Stellar Testnet transactions
+APIs
+Provide claimant and reviewer data
+Notifications
+Display claim submission and decision updates
+
+Soroban Developer
+Build claim-state contract using Rust and Soroban SDK.
+Implement unique claim registration.
+Implement role-based authorization.
+Enforce valid state transitions.
+Implement claim approval and rejection.
+Record approved claim amounts.
+Implement payout authorization.
+Prevent duplicate authorization.
+Validate payout amounts.
+Emit contract events.
+Write automated tests.
+Deploy the contract on Stellar Testnet.
+6. Interactive Claim Review Example
+This preview demonstrates the distinction between a claim's requested amount, approved amount, and payout authorization.
+Claim review preview
+Illustrative
+Claim reference
+Requested amount
+Approved amount
+Review decision
+Approve claim
+Reject claim
+Claim status
+Approved
+Payout authorization
+Not authorized
+Actual settlement
+Not paid
+Simulate payout authorizationThis is a local workflow demonstration. It does not submit a transaction, grant real authorization, or transfer funds.
+7. Smart Contract Testing & Validation
+Objective: Verify claim registration, reviewer authorization, state transitions, payout authorization, and transaction monitoring.
+#
+Test scenario
+Expected result
+1
+Submit valid claim
+Claim registered
+2
+Submit incomplete claim
+Validation error
+3
+Generate claim reference
+Unique ID created
+4
+Move claim to review
+Status updated
+5
+Authorized reviewer approves claim
+Approved
+6
+Authorized reviewer rejects claim
+Rejected
+7
+Unauthorized reviewer attempts approval
+Rejected
+8
+Approve already rejected claim
+Invalid transition rejected
+9
+Authorize payout for approved claim
+Authorization recorded
+10
+Authorize payout for rejected claim
+Rejected
+11
+Duplicate payout authorization
+Rejected
+12
+Authorization exceeds approved amount
+Rejected
+13
+Unauthorized claim-state change
+Rejected
+14
+Failed contract transaction
+State remains consistent
+15
+Verify authorization history
+Matches on-chain records
+16
+Monitor optional actual payment
+Settlement tracked separately
+
+Required testing evidence
+Automated Soroban contract test results.
+Claim registration transaction hashes.
+Approval and rejection transaction references.
+Successful payout authorization evidence.
+Unauthorized action test results.
+Duplicate authorization test results.
+Invalid state transition test results.
+Frontend-to-contract integration tests.
+Technical testing report and identified limitations.
+
+11. Final MVP Delivery Checklist
+MVP completion tracker
+0 / 15 completed
+Complete Figma designs and interactive prototype
+Implement claimant registration and claim submission
+Generate unique claim references
+Implement reviewer dashboard and claim history
+Implement claim approval and rejection workflows
+Deploy Soroban claim-state contract on Stellar Testnet
+Implement authorized claim-state transitions
+Implement approved amount validation
+Implement payout authorization and duplicate-action prevention
+Build payout authorization dashboard
+Implement contract event monitoring and transaction history
+Distinguish authorized payouts from actual settlement
+Complete automated contract and frontend integration tests
+Validate unauthorized actions and invalid state transitions
+Submit GitHub repository, deployed MVP URL, contract address, and technical report
+Copy checklist
+12. Definition of Done
+The ClaimFlow MVP will be considered complete when a claimant can submit an insurance claim, receive a unique reference, and track its status through a functional interface.
+Authorized reviewers must be able to assess claims, approve or reject submissions, and record their decisions.
+The Soroban contract must enforce valid claim-state transitions, restrict protected actions to authorized reviewers, and prevent duplicate payout authorizations.
+The payout dashboard must distinguish between approved claims, authorized payouts, and actual payment settlements, with relevant on-chain transaction references.
+The team must provide automated contract tests, transaction evidence, a deployed MVP, and technical documentation.
+Development priority: Focus on the complete claims lifecycle: claim submission → reviewer assessment → approval or rejection → Soroban state update → payout authorization → transaction monitoring. Actual insurance settlement and advanced insurance operations should remain outside the initial sprint.
+

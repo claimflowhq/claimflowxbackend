@@ -1,0 +1,2332 @@
+openapi: 3.0.3
+info:
+  title: ClaimFlow Insurance & Soroban Settlement API
+  version: 1.0.0
+  description: Enterprise Insurance Claims Management Platform powered by Stellar
+    Soroban smart contracts. Enables claim submission, role-based review workflow,
+    on-chain state verification, payout authorization, and testnet transaction monitoring.
+paths:
+  /api/v1/auth/login/:
+    post:
+      operationId: v1_auth_login_create
+      description: Authenticates username and password, returning JWT access and refresh
+        tokens along with user profile.
+      summary: User Login (JWT)
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/me/:
+    get:
+      operationId: v1_auth_me_retrieve
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+    put:
+      operationId: v1_auth_me_update
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserProfileRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+    patch:
+      operationId: v1_auth_me_partial_update
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserProfileRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+          description: ''
+  /api/v1/auth/register/:
+    post:
+      operationId: v1_auth_register_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRegistrationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRegistration'
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: v1_auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/blockchain/claims/{claim_reference}/:
+    get:
+      operationId: v1_blockchain_claims_retrieve
+      description: Reads verified claim state directly from the Soroban smart contract.
+      summary: Query verified claim on-chain state
+      parameters:
+      - in: path
+        name: claim_reference
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnChainClaim'
+          description: ''
+  /api/v1/blockchain/contract-info/:
+    get:
+      operationId: v1_blockchain_contract_info_retrieve
+      description: Retrieve deployed Soroban contract address, RPC URL, and network
+        configuration.
+      summary: Soroban contract details
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractInfo'
+          description: ''
+  /api/v1/blockchain/transactions/:
+    get:
+      operationId: v1_blockchain_transactions_list
+      description: Retrieve recorded blockchain transactions, hashes, ledger sequences,
+        and explorer links.
+      summary: List Stellar & Soroban transactions
+      parameters:
+      - in: query
+        name: claim_reference
+        schema:
+          type: string
+      - in: query
+        name: network
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - FAILED
+          - PENDING
+          - SUCCESSFUL
+        description: |-
+          * `PENDING` - Pending
+          * `SUCCESSFUL` - Successful
+          * `FAILED` - Failed
+      - in: query
+        name: tx_type
+        schema:
+          type: string
+          enum:
+          - CLAIM_APPROVAL
+          - CLAIM_REGISTRATION
+          - CLAIM_REJECTION
+          - PAYOUT_AUTHORIZATION
+          - REVIEW_ASSIGNMENT
+          - SETTLEMENT
+        description: |-
+          * `CLAIM_REGISTRATION` - Claim Registration
+          * `REVIEW_ASSIGNMENT` - Review Assignment
+          * `CLAIM_APPROVAL` - Claim Approval
+          * `CLAIM_REJECTION` - Claim Rejection
+          * `PAYOUT_AUTHORIZATION` - Payout Authorization
+          * `SETTLEMENT` - Settlement
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTransactionRecordList'
+          description: ''
+  /api/v1/blockchain/transactions/{tx_hash}/:
+    get:
+      operationId: v1_blockchain_transactions_retrieve
+      description: Look up a transaction on Stellar / Soroban and verify its status.
+      summary: Verify transaction hash
+      parameters:
+      - in: path
+        name: tx_hash
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionRecord'
+          description: ''
+  /api/v1/claims/:
+    get:
+      operationId: v1_claims_list
+      description: Filter claims by status, category, policy, claimant.
+      summary: List insurance claims
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - AUTO
+          - HEALTH
+          - LIFE
+          - PROPERTY
+          - TRAVEL
+        description: |-
+          * `HEALTH` - Health Insurance
+          * `AUTO` - Automobile Insurance
+          * `PROPERTY` - Property & Casualty
+          * `LIFE` - Life Insurance
+          * `TRAVEL` - Travel Insurance
+      - in: query
+        name: claimant
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: policy
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - DRAFT
+          - PAYOUT_AUTHORIZED
+          - REJECTED
+          - SETTLED
+          - SUBMITTED
+          - UNDER_REVIEW
+        description: |-
+          * `DRAFT` - Draft
+          * `SUBMITTED` - Submitted
+          * `UNDER_REVIEW` - Under Review
+          * `APPROVED` - Approved
+          * `REJECTED` - Rejected
+          * `PAYOUT_AUTHORIZED` - Payout Authorized
+          * `SETTLED` - Settled
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClaimList'
+          description: ''
+    post:
+      operationId: v1_claims_create
+      description: Claimants create a claim with incident details, requested amount,
+        and policy reference.
+      summary: Submit a new insurance claim
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+  /api/v1/claims/{id}/:
+    get:
+      operationId: v1_claims_retrieve
+      summary: Retrieve claim details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+    put:
+      operationId: v1_claims_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+    patch:
+      operationId: v1_claims_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClaimRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClaimRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClaimRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+    delete:
+      operationId: v1_claims_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/claims/{id}/approve/:
+    post:
+      operationId: v1_claims_approve_create
+      description: Authorized reviewer approves claim with an approved amount and
+        decision notes, recording the approval on Soroban.
+      summary: Approve claim
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimApproveActionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClaimApproveActionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClaimApproveActionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+  /api/v1/claims/{id}/authorize_payout/:
+    post:
+      operationId: v1_claims_authorize_payout_create
+      description: Authorized reviewer or admin authorizes payout for an approved
+        claim. Validates amount and prevents duplicate authorization.
+      summary: Authorize payout on Soroban
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayoutAuthorizeActionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PayoutAuthorizeActionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PayoutAuthorizeActionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutAuthorization'
+          description: ''
+  /api/v1/claims/{id}/evidence/:
+    post:
+      operationId: v1_claims_evidence_create
+      description: Upload or link supporting evidence documents.
+      summary: Attach supporting evidence
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportingEvidenceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupportingEvidenceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupportingEvidenceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportingEvidence'
+          description: ''
+  /api/v1/claims/{id}/reject/:
+    post:
+      operationId: v1_claims_reject_create
+      description: Authorized reviewer rejects claim with comments, recording the
+        decision on Soroban.
+      summary: Reject claim
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRejectActionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClaimRejectActionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClaimRejectActionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+  /api/v1/claims/{id}/review/:
+    post:
+      operationId: v1_claims_review_create
+      description: Authorized reviewer assigns the claim and transitions status to
+        Under Review on-chain.
+      summary: Move claim to Under Review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+  /api/v1/claims/{id}/settle/:
+    post:
+      operationId: v1_claims_settle_create
+      description: Records confirmed Stellar Testnet transaction settlement. Clearly
+        distinguishes authorization from fund settlement.
+      summary: Record actual settlement
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimSettleActionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClaimSettleActionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClaimSettleActionRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+          description: ''
+  /api/v1/claims/{id}/timeline/:
+    get:
+      operationId: v1_claims_timeline_list
+      description: Chronological audit history of state changes, reviewers, notes,
+        and transaction hashes.
+      summary: Claim activity history timeline
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - AUTO
+          - HEALTH
+          - LIFE
+          - PROPERTY
+          - TRAVEL
+        description: |-
+          * `HEALTH` - Health Insurance
+          * `AUTO` - Automobile Insurance
+          * `PROPERTY` - Property & Casualty
+          * `LIFE` - Life Insurance
+          * `TRAVEL` - Travel Insurance
+      - in: query
+        name: claimant
+        schema:
+          type: integer
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this claim.
+        required: true
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: policy
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - APPROVED
+          - DRAFT
+          - PAYOUT_AUTHORIZED
+          - REJECTED
+          - SETTLED
+          - SUBMITTED
+          - UNDER_REVIEW
+        description: |-
+          * `DRAFT` - Draft
+          * `SUBMITTED` - Submitted
+          * `UNDER_REVIEW` - Under Review
+          * `APPROVED` - Approved
+          * `REJECTED` - Rejected
+          * `PAYOUT_AUTHORIZED` - Payout Authorized
+          * `SETTLED` - Settled
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClaimTimelineEventList'
+          description: ''
+  /api/v1/claims/dashboard/metrics/:
+    get:
+      operationId: v1_claims_dashboard_metrics_retrieve
+      description: Summary statistics across claims, states, requested vs authorized
+        volumes.
+      summary: Dashboard operational metrics
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardMetrics'
+          description: ''
+  /api/v1/payouts/:
+    get:
+      operationId: v1_payouts_list
+      description: View records of authorized payouts, on-chain transaction hashes,
+        and settlement statuses.
+      summary: List payout authorizations
+      parameters:
+      - in: query
+        name: claim__category
+        schema:
+          type: string
+          enum:
+          - AUTO
+          - HEALTH
+          - LIFE
+          - PROPERTY
+          - TRAVEL
+        description: |-
+          * `HEALTH` - Health Insurance
+          * `AUTO` - Automobile Insurance
+          * `PROPERTY` - Property & Casualty
+          * `LIFE` - Life Insurance
+          * `TRAVEL` - Travel Insurance
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - CONFIRMED
+          - FAILED
+          - PENDING
+        description: |-
+          * `PENDING` - Pending
+          * `CONFIRMED` - Confirmed
+          * `FAILED` - Failed
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPayoutAuthorizationList'
+          description: ''
+  /api/v1/payouts/{id}/:
+    get:
+      operationId: v1_payouts_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayoutAuthorization'
+          description: ''
+  /api/v1/payouts/pending-claims/:
+    get:
+      operationId: v1_payouts_pending_claims_list
+      description: Returns list of approved claims ready for payout authorization
+        on Soroban.
+      summary: Approved claims awaiting payout authorization
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Claim'
+          description: ''
+  /api/v1/policies/:
+    get:
+      operationId: v1_policies_list
+      description: Claimants view their own policies. Reviewers and admins view all
+        policies.
+      summary: List policies
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - AUTO
+          - HEALTH
+          - LIFE
+          - PROPERTY
+          - TRAVEL
+        description: |-
+          * `HEALTH` - Health Insurance
+          * `AUTO` - Automobile Insurance
+          * `PROPERTY` - Property & Casualty
+          * `LIFE` - Life Insurance
+          * `TRAVEL` - Travel Insurance
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPolicyList'
+          description: ''
+    post:
+      operationId: v1_policies_create
+      summary: Create a new policy (Admins/Reviewers)
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+          description: ''
+  /api/v1/policies/{id}/:
+    get:
+      operationId: v1_policies_retrieve
+      summary: Retrieve policy details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this policy.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+          description: ''
+    put:
+      operationId: v1_policies_update
+      summary: Update policy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this policy.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PolicyRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+          description: ''
+    patch:
+      operationId: v1_policies_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this policy.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPolicyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPolicyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPolicyRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Policy'
+          description: ''
+    delete:
+      operationId: v1_policies_destroy
+      summary: Delete policy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this policy.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    CategoryEnum:
+      enum:
+      - HEALTH
+      - AUTO
+      - PROPERTY
+      - LIFE
+      - TRAVEL
+      type: string
+      description: |-
+        * `HEALTH` - Health Insurance
+        * `AUTO` - Automobile Insurance
+        * `PROPERTY` - Property & Casualty
+        * `LIFE` - Life Insurance
+        * `TRAVEL` - Travel Insurance
+    Claim:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        claim_reference:
+          type: string
+          readOnly: true
+          description: Unique verifiable reference for claim
+        claimant:
+          type: integer
+          readOnly: true
+        claimant_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        claimant_wallet:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          readOnly: true
+        policy:
+          type: integer
+        policy_number:
+          type: string
+          readOnly: true
+        policy_limit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Maximum coverage limit in USDC equivalent
+          readOnly: true
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        incident_description:
+          type: string
+        incident_date:
+          type: string
+          format: date
+        requested_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Requested compensation amount in USDC equivalent
+        approved_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+          description: Approved compensation amount determined by reviewer
+        authorized_payout_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+          description: Payout amount authorized on Soroban smart contract
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ClaimStatusEnum'
+          readOnly: true
+        assigned_reviewer:
+          type: integer
+          readOnly: true
+          nullable: true
+        assigned_reviewer_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        on_chain_status:
+          allOf:
+          - $ref: '#/components/schemas/OnChainStatusEnum'
+          readOnly: true
+        on_chain_tx_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/SupportingEvidence'
+          readOnly: true
+        payout_authorization:
+          allOf:
+          - $ref: '#/components/schemas/PayoutAuthorization'
+          readOnly: true
+        review_decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimReviewDecision'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - approved_amount
+      - assigned_reviewer
+      - assigned_reviewer_username
+      - authorized_payout_amount
+      - claim_reference
+      - claimant
+      - claimant_username
+      - claimant_wallet
+      - created_at
+      - evidence
+      - id
+      - incident_date
+      - incident_description
+      - on_chain_status
+      - on_chain_tx_hash
+      - payout_authorization
+      - policy
+      - policy_limit
+      - policy_number
+      - requested_amount
+      - review_decisions
+      - status
+      - updated_at
+    ClaimApproveActionRequest:
+      type: object
+      properties:
+        approved_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+          minLength: 1
+      required:
+      - approved_amount
+      - notes
+    ClaimRejectActionRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          minLength: 1
+      required:
+      - notes
+    ClaimRequest:
+      type: object
+      properties:
+        policy:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        incident_description:
+          type: string
+          minLength: 1
+        incident_date:
+          type: string
+          format: date
+        requested_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Requested compensation amount in USDC equivalent
+      required:
+      - incident_date
+      - incident_description
+      - policy
+      - requested_amount
+    ClaimReviewDecision:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        reviewer:
+          type: integer
+          readOnly: true
+        reviewer_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        decision:
+          allOf:
+          - $ref: '#/components/schemas/DecisionEnum'
+          readOnly: true
+        approved_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+          nullable: true
+        notes:
+          type: string
+          readOnly: true
+        tx_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - approved_amount
+      - created_at
+      - decision
+      - id
+      - notes
+      - reviewer
+      - reviewer_username
+      - tx_hash
+    ClaimSettleActionRequest:
+      type: object
+      properties:
+        settlement_reference:
+          type: string
+          minLength: 1
+          description: Confirmed Stellar Testnet payment transaction hash
+      required:
+      - settlement_reference
+    ClaimStatusEnum:
+      enum:
+      - DRAFT
+      - SUBMITTED
+      - UNDER_REVIEW
+      - APPROVED
+      - REJECTED
+      - PAYOUT_AUTHORIZED
+      - SETTLED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `SUBMITTED` - Submitted
+        * `UNDER_REVIEW` - Under Review
+        * `APPROVED` - Approved
+        * `REJECTED` - Rejected
+        * `PAYOUT_AUTHORIZED` - Payout Authorized
+        * `SETTLED` - Settled
+    ClaimTimelineEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        actor:
+          type: integer
+          readOnly: true
+          nullable: true
+        actor_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        action:
+          type: string
+          readOnly: true
+        from_status:
+          type: string
+          readOnly: true
+        to_status:
+          type: string
+          readOnly: true
+        details:
+          type: string
+          readOnly: true
+        tx_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - action
+      - actor
+      - actor_username
+      - details
+      - from_status
+      - id
+      - timestamp
+      - to_status
+      - tx_hash
+    ContractInfo:
+      type: object
+      properties:
+        contract_id:
+          type: string
+        network:
+          type: string
+        rpc_url:
+          type: string
+        admin_address:
+          type: string
+        explorer_url:
+          type: string
+          format: uri
+        status:
+          type: string
+        simulated:
+          type: boolean
+      required:
+      - admin_address
+      - contract_id
+      - explorer_url
+      - network
+      - rpc_url
+      - simulated
+      - status
+    CustomTokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    DashboardMetrics:
+      type: object
+      properties:
+        total_claims:
+          type: integer
+        submitted_claims:
+          type: integer
+        under_review_claims:
+          type: integer
+        approved_claims:
+          type: integer
+        rejected_claims:
+          type: integer
+        payout_authorized_claims:
+          type: integer
+        settled_claims:
+          type: integer
+        total_requested_volume:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        total_authorized_payout_volume:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        total_settled_volume:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+      required:
+      - approved_claims
+      - payout_authorized_claims
+      - rejected_claims
+      - settled_claims
+      - submitted_claims
+      - total_authorized_payout_volume
+      - total_claims
+      - total_requested_volume
+      - total_settled_volume
+      - under_review_claims
+    DecisionEnum:
+      enum:
+      - UNDER_REVIEW
+      - APPROVED
+      - REJECTED
+      type: string
+      description: |-
+        * `UNDER_REVIEW` - Under Review
+        * `APPROVED` - Approved
+        * `REJECTED` - Rejected
+    OnChainClaim:
+      type: object
+      properties:
+        claim_id:
+          type: string
+        claimant:
+          type: string
+        policy_id:
+          type: string
+        requested_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        approved_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        authorized_payout_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        status:
+          type: string
+        reviewer:
+          type: string
+          nullable: true
+        decision_notes:
+          type: string
+        settlement_ref:
+          type: string
+        updated_at:
+          type: integer
+        contract_id:
+          type: string
+        network:
+          type: string
+      required:
+      - approved_amount
+      - authorized_payout_amount
+      - claim_id
+      - claimant
+      - contract_id
+      - decision_notes
+      - network
+      - policy_id
+      - requested_amount
+      - reviewer
+      - settlement_ref
+      - status
+      - updated_at
+    OnChainStatusEnum:
+      enum:
+      - NOT_SUBMITTED
+      - PENDING
+      - CONFIRMED
+      - FAILED
+      type: string
+      description: |-
+        * `NOT_SUBMITTED` - Not Submitted
+        * `PENDING` - Pending
+        * `CONFIRMED` - Confirmed
+        * `FAILED` - Failed
+    PaginatedClaimList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Claim'
+    PaginatedClaimTimelineEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClaimTimelineEvent'
+    PaginatedPayoutAuthorizationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PayoutAuthorization'
+    PaginatedPolicyList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Policy'
+    PaginatedTransactionRecordList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionRecord'
+    PatchedClaimRequest:
+      type: object
+      properties:
+        policy:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        incident_description:
+          type: string
+          minLength: 1
+        incident_date:
+          type: string
+          format: date
+        requested_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Requested compensation amount in USDC equivalent
+    PatchedPolicyRequest:
+      type: object
+      properties:
+        policy_number:
+          type: string
+          minLength: 1
+          maxLength: 64
+        policyholder:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        coverage_limit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Maximum coverage limit in USDC equivalent
+        deductible:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Policyholder deductible
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+        terms_summary:
+          type: string
+    PatchedUserProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          description: |-
+            Role determining permissions in ClaimFlow lifecycle
+
+            * `CLAIMANT` - Claimant
+            * `REVIEWER` - Reviewer
+            * `ADMIN` - Admin
+        wallet_address:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          maxLength: 64
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 30
+    PayoutAuthorization:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        claim:
+          type: integer
+          readOnly: true
+        claim_reference:
+          type: string
+          description: Unique verifiable reference for claim
+          readOnly: true
+        claimant_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        claimant_wallet:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          readOnly: true
+        authorized_by:
+          type: integer
+          readOnly: true
+        authorized_by_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/PayoutAuthorizationStatusEnum'
+          readOnly: true
+        tx_hash:
+          type: string
+          readOnly: true
+          nullable: true
+        error_message:
+          type: string
+          readOnly: true
+        settlement_reference:
+          type: string
+          readOnly: true
+        settled_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - amount
+      - authorized_by
+      - authorized_by_username
+      - claim
+      - claim_reference
+      - claimant_username
+      - claimant_wallet
+      - created_at
+      - error_message
+      - id
+      - settled_at
+      - settlement_reference
+      - status
+      - tx_hash
+      - updated_at
+    PayoutAuthorizationStatusEnum:
+      enum:
+      - PENDING
+      - CONFIRMED
+      - FAILED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `CONFIRMED` - Confirmed
+        * `FAILED` - Failed
+    PayoutAuthorizeActionRequest:
+      type: object
+      properties:
+        payout_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+      required:
+      - payout_amount
+    Policy:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        policy_number:
+          type: string
+          maxLength: 64
+        policyholder:
+          type: integer
+        policyholder_username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        coverage_limit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Maximum coverage limit in USDC equivalent
+        deductible:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Policyholder deductible
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+        terms_summary:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - coverage_limit
+      - created_at
+      - end_date
+      - id
+      - policy_number
+      - policyholder
+      - policyholder_username
+      - start_date
+      - updated_at
+    PolicyRequest:
+      type: object
+      properties:
+        policy_number:
+          type: string
+          minLength: 1
+          maxLength: 64
+        policyholder:
+          type: integer
+        category:
+          $ref: '#/components/schemas/CategoryEnum'
+        coverage_limit:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Maximum coverage limit in USDC equivalent
+        deductible:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Policyholder deductible
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        is_active:
+          type: boolean
+        terms_summary:
+          type: string
+      required:
+      - coverage_limit
+      - end_date
+      - policy_number
+      - policyholder
+      - start_date
+    RoleEnum:
+      enum:
+      - CLAIMANT
+      - REVIEWER
+      - ADMIN
+      type: string
+      description: |-
+        * `CLAIMANT` - Claimant
+        * `REVIEWER` - Reviewer
+        * `ADMIN` - Admin
+    SupportingEvidence:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        file_name:
+          type: string
+          maxLength: 255
+        file_url:
+          type: string
+          maxLength: 512
+        document_type:
+          type: string
+          description: e.g. MEDICAL_BILL, POLICE_REPORT, REPAIR_ESTIMATE, PHOTO
+          maxLength: 64
+        file_size_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - file_name
+      - file_url
+      - id
+      - uploaded_at
+    SupportingEvidenceRequest:
+      type: object
+      properties:
+        file_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        file_url:
+          type: string
+          minLength: 1
+          maxLength: 512
+        document_type:
+          type: string
+          minLength: 1
+          description: e.g. MEDICAL_BILL, POLICE_REPORT, REPAIR_ESTIMATE, PHOTO
+          maxLength: 64
+        file_size_bytes:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - file_name
+      - file_url
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TransactionRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        claim_reference:
+          type: string
+          readOnly: true
+        tx_hash:
+          type: string
+          readOnly: true
+        tx_type:
+          allOf:
+          - $ref: '#/components/schemas/TxTypeEnum'
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/TransactionRecordStatusEnum'
+          readOnly: true
+        network:
+          type: string
+          readOnly: true
+        contract_id:
+          type: string
+          readOnly: true
+        ledger_sequence:
+          type: integer
+          readOnly: true
+          nullable: true
+        explorer_url:
+          type: string
+          format: uri
+          readOnly: true
+        error_message:
+          type: string
+          readOnly: true
+        raw_response:
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - claim_reference
+      - contract_id
+      - created_at
+      - error_message
+      - explorer_url
+      - id
+      - ledger_sequence
+      - network
+      - raw_response
+      - status
+      - tx_hash
+      - tx_type
+    TransactionRecordStatusEnum:
+      enum:
+      - PENDING
+      - SUCCESSFUL
+      - FAILED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `SUCCESSFUL` - Successful
+        * `FAILED` - Failed
+    TxTypeEnum:
+      enum:
+      - CLAIM_REGISTRATION
+      - REVIEW_ASSIGNMENT
+      - CLAIM_APPROVAL
+      - CLAIM_REJECTION
+      - PAYOUT_AUTHORIZATION
+      - SETTLEMENT
+      type: string
+      description: |-
+        * `CLAIM_REGISTRATION` - Claim Registration
+        * `REVIEW_ASSIGNMENT` - Review Assignment
+        * `CLAIM_APPROVAL` - Claim Approval
+        * `CLAIM_REJECTION` - Claim Rejection
+        * `PAYOUT_AUTHORIZATION` - Payout Authorization
+        * `SETTLEMENT` - Settlement
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          description: |-
+            Role determining permissions in ClaimFlow lifecycle
+
+            * `CLAIMANT` - Claimant
+            * `REVIEWER` - Reviewer
+            * `ADMIN` - Admin
+        wallet_address:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          maxLength: 64
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 30
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - email
+      - id
+      - updated_at
+      - username
+    UserProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          description: |-
+            Role determining permissions in ClaimFlow lifecycle
+
+            * `CLAIMANT` - Claimant
+            * `REVIEWER` - Reviewer
+            * `ADMIN` - Admin
+        wallet_address:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          maxLength: 64
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 30
+      required:
+      - email
+      - username
+    UserRegistration:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          description: |-
+            Role determining permissions in ClaimFlow lifecycle
+
+            * `CLAIMANT` - Claimant
+            * `REVIEWER` - Reviewer
+            * `ADMIN` - Admin
+        wallet_address:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          maxLength: 64
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 30
+      required:
+      - email
+      - id
+      - username
+    UserRegistrationRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          description: |-
+            Role determining permissions in ClaimFlow lifecycle
+
+            * `CLAIMANT` - Claimant
+            * `REVIEWER` - Reviewer
+            * `ADMIN` - Admin
+        wallet_address:
+          type: string
+          nullable: true
+          description: Stellar Testnet public key (e.g. G...)
+          maxLength: 64
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 30
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 8
+      required:
+      - email
+      - password
+      - password_confirm
+      - username
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
